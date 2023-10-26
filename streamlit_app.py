@@ -1,55 +1,35 @@
 import streamlit as st
-import sounddevice as sd 
-from deepgram import Deepgram
 import asyncio
-import time
-
-st.title('Transcripción de voz en vivo')
+import json
+from deepgram import Deepgram
 
 # Tu clave API de Deepgram 
 DEEPGRAM_API_KEY = '887355a9368a2b55cbb723a9b735af03f618ed6c'  
 
 
-# ID del micrófono a usar
-mic_id = 1  
+# Ruta al archivo M4A local
+FILE = 'ruta/a/tu/archivo.m4a'  
 
-async def transcribe():
-    deepgram = Deepgram(DEEPGRAM_API_KEY)
-    
-    try:
-        deepgram_live = await deepgram.transcription.live({
-          'smart_format': True,
-          'interim_results': False,
-          'language': 'es-ES',
-          'sample_rate': 44100,
-          'channels': 1,
-          'model': 'nova',
-        })
-    except Exception as e:
-        st.error(f'Error al abrir socket: {e}')
-        return
+async def main():
 
-    deepgram_live.registerHandler(deepgram_live.event.TRANSCRIPT_RECEIVED, show_transcript)
+  deepgram = Deepgram(DEEPGRAM_API_KEY)
 
-    with sd.RawInputStream(samplerate=44100, blocksize = 8000, device=mic_id, dtype='int16', 
-                        channels=1, callback=get_audio):
-        st.write('#' * 80)
-        st.write('Habla ahora para transcribir tu voz')
-        st.write('#' * 80)
+  # Abrir el archivo en modo bytes para lectura binaria
+  with open(FILE, 'rb') as audio: 
+    source = {
+      'buffer': audio,
+      'mimetype': 'audio/mp4' # Mimetype para M4A
+    }
 
-        while True:
-            time.sleep(0.1)    
+  response = await deepgram.transcription.prerecorded(
+    source,
+    {
+      'language': 'es-ES',  
+      'sample_rate': 44100, # Estándar para archivos M4A
+      'model': 'nova'
+    }
+  )
 
-    await deepgram_live.finish()
-
-def get_audio(indata, frames, time, status):
-  deepgram_live.send(indata.tobytes())
-
-def show_transcript(transcript):
-    try:
-        text = transcript['channel']['alternatives'][0]['transcript']
-        st.write(text)
-    except:
-        st.warning('No se pudo acceder al texto transcripto')
-
-asyncio.run(transcribe())  
+  print(json.dumps(response, indent=4))
+ 
+asyncio.run(main())
