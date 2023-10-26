@@ -1,48 +1,45 @@
 import streamlit as st
+from deepgram import Deepgram
 import asyncio
 import aiohttp
-from deepgram import Deepgram
-import os
 
-# Título de la aplicación
-st.title("Transcripción de Archivo de Audio")
+st.title('Transcripción de audio en vivo')
 
-# Your Deepgram API Key
+# Tu clave API de Deepgram 
 DEEPGRAM_API_KEY = '887355a9368a2b55cbb723a9b735af03f618ed6c'
+ 
 
+# URL del audio en vivo a transcribir
+URL = 'http://stream.live.vc.bbcmedia.co.uk/bbc_world_service'  
 
-# URL para la transcripción de Deepgram
-DEEPGRAM_URL = 'https://api.deepgram.com/v1/listen'
-
-# Cargar un archivo de audio
-uploaded_file = st.file_uploader("Sube un archivo de audio (.m4a, .mp3 o .wav)", type=["m4a", "mp3", "wav"])
-
-def transcribe_audio(audio_data):
+async def transcribe():
+    deepgram = Deepgram(DEEPGRAM_API_KEY)
+    
     try:
-        headers = {
-            'Authorization': f'Token {DEEPGRAM_API_KEY}',
-        }
-        response = requests.post(DEEPGRAM_URL, headers=headers, data=audio_data)
-
-        if response.status_code == 200:
-            transcript = response.json()
-            st.write("Transcripción del archivo de audio:")
-            st.write(transcript)
-        else:
-            st.write(f"Error al obtener la transcripción: {response.text}")
-
+        deepgram_live = await deepgram.transcription.live({
+          'smart_format': True,
+          'interim_results': False,
+          'language': 'es',
+          'model': 'nova',
+        })
     except Exception as e:
-        st.write(f'Error: {e}')
+        st.error(f'Error al abrir socket: {e}')
+        return
 
-# Transcribir el archivo cargado
-if uploaded_file is not None:
-    st.write("Transcribiendo archivo de audio...")
-
-    audio_data = uploaded_file.read()
-
-    try:
-        transcribe_audio(audio_data)
-    except Exception as e:
-        st.write("Error al procesar el archivo de audio. Asegúrate de que el archivo esté en un formato compatible (m4a, mp3, wav).")
-
-# Reemplaza 'YOUR_DEEPGRAM_API_KEY' con tu clave de API de Deepgram antes de ejecutar la aplicación
+    deepgram_live.registerHandler(deepgram_live.event.TRANSCRIPT_RECEIVED, show_transcript)
+    
+    async with aiohttp.ClientSession() as session:
+        async with session.get(URL) as audio:
+            while True:
+                data = await audio.content.readany()
+                deepgram_live.send(data)
+                
+                if not data:
+                    break
+                    
+    await deepgram_live.finish()
+    
+def show_transcript(transcript):
+    st.write(transcript.channel.alternatives[0].transcript)
+    
+asyncio.run(transcribe())
