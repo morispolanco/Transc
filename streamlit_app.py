@@ -3,14 +3,13 @@ from deepgram import Deepgram
 import asyncio
 import aiohttp
 
-st.title('Transcripción de audio en vivo')
+st.title('Transcripción de audio en vivo') 
 
-# Tu clave API de Deepgram 
-DEEPGRAM_API_KEY = '887355a9368a2b55cbb723a9b735af03f618ed6c'
- 
+# Tu clave API de Deepgram
+DEEPGRAM_API_KEY = '887355a9368a2b55cbb723a9b735af03f618ed6c'  
 
-# URL del audio en vivo a transcribir
-URL = 'http://stream.live.vc.bbcmedia.co.uk/bbc_world_service'  
+# URL del audio en vivo a transcribir 
+URL = 'http://stream.live.vc.bbcmedia.co.uk/bbc_world_service'   
 
 async def transcribe():
     deepgram = Deepgram(DEEPGRAM_API_KEY)
@@ -19,7 +18,7 @@ async def transcribe():
         deepgram_live = await deepgram.transcription.live({
           'smart_format': True,
           'interim_results': False,
-          'language': 'es',
+          'language': 'en-US',
           'model': 'nova',
         })
     except Exception as e:
@@ -40,6 +39,10 @@ async def transcribe():
     await deepgram_live.finish()
     
 def show_transcript(transcript):
-    st.write(transcript.channel.alternatives[0].transcript)
-    
+    try:
+        text = transcript['channel']['alternatives'][0]['transcript']
+        st.write(text)
+    except:
+        st.warning('No se pudo acceder al texto transcripto')     
+
 asyncio.run(transcribe())
