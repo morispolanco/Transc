@@ -2,17 +2,19 @@ import streamlit as st
 import asyncio
 import aiohttp
 from deepgram import Deepgram
+from pydub import AudioSegment
+import io
 
 # Título de la aplicación
-st.title("Transcripción de Audio en Tiempo Real")
+st.title("Transcripción de Archivo de Audio")
 
 # Your Deepgram API Key
 DEEPGRAM_API_KEY = '887355a9368a2b55cbb723a9b735af03f618ed6c'
 
-# URL para el audio en tiempo real que deseas transcribir
-URL = 'http://stream.live.vc.bbcmedia.co.uk/bbc_world_service'
+# Cargar un archivo de audio
+uploaded_file = st.file_uploader("Sube un archivo de audio (.m4a, .mp3 o .wav)", type=["m4a", "mp3", "wav"])
 
-async def transcribe_audio():
+async def transcribe_audio(audio_data):
     try:
         # Inicializar el cliente de Deepgram
         deepgram = Deepgram(DEEPGRAM_API_KEY)
@@ -28,28 +30,34 @@ async def transcribe_audio():
         # Escuchar el evento de cierre de la conexión
         deepgramLive.registerHandler(deepgramLive.event.CLOSE, lambda c: st.write(f'Conexión cerrada con el código {c}.'))
 
-        # Escuchar los resultados de la transcripción y mostrarlos en la aplicación
-        async for transcript in deepgramLive:
-            st.write("Transcripción en tiempo real:")
-            st.write(transcript)
+        # Iniciar la conexión
+        await deepgramLive.open()
+
+        # Enviar el archivo de audio a Deepgram
+        deepgramLive.send(audio_data)
 
         # Indicar que hemos terminado de enviar datos enviando un mensaje de cero bytes al punto final de transmisión de Deepgram y esperar hasta que recibamos el objeto de metadatos final
         await deepgramLive.finish()
 
+        # Escuchar los resultados de la transcripción y mostrarlos en la aplicación
+        async for transcript in deepgramLive:
+            st.write("Transcripción del archivo de audio:")
+            st.write(transcript)
+
     except Exception as e:
-        st.write(f'No se pudo abrir el socket: {e}')
+        st.write(f'Error: {e}')
 
-# Iniciar la transcripción de audio
-if st.button("Iniciar Transcripción de Audio"):
-    st.write("Transcripción en tiempo real iniciada. Habla para comenzar.")
+# Transcribir el archivo cargado
+if uploaded_file is not None:
+    st.write("Transcribiendo archivo de audio...")
 
-    # Iniciar la transcripción en el bucle de eventos de Streamlit
-    asyncio.run(transcribe_audio())
+    audio_data = uploaded_file.read()
 
-    st.write("Transcripción en tiempo real finalizada.")
-
-# Detener la transcripción de audio
-if st.button("Detener Transcripción de Audio"):
-    st.write("Transcripción en tiempo real detenida.")
+    # Comprobar si el archivo es compatible con pydub
+    try:
+        audio = AudioSegment.from_file(io.BytesIO(audio_data))
+        asyncio.run(transcribe_audio(audio_data))
+    except Exception as e:
+        st.write("Error al procesar el archivo de audio. Asegúrate de que el archivo esté en un formato compatible (m4a, mp3, wav).")
 
 # Reemplaza 'YOUR_DEEPGRAM_API_KEY' con tu clave de API de Deepgram antes de ejecutar la aplicación
