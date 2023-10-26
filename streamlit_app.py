@@ -1,44 +1,57 @@
 import streamlit as st
+import asyncio
+import aiohttp
 from deepgram import Deepgram
-import json
-
-# Configuración de la API de Deepgram
-DEEPGRAM_API_KEY = '887355a9368a2b55cbb723a9b735af03f618ed6c'
-dg_client = Deepgram(DEEPGRAM_API_KEY)
 
 # Título de la aplicación
-st.title("Transcripción de Voz en Tiempo Real")
+st.title("Transcripción de Audio en Tiempo Real")
 
-# Texto explicativo
-st.write("Graba tu voz y obtén una transcripción en tiempo real.")
+# Your Deepgram API Key
+DEEPGRAM_API_KEY = '887355a9368a2b55cbb723a9b735af03f618ed6c'
 
-# Iniciar la grabación de voz
-recording = st.radio("Iniciar la grabación de voz", ("Sí", "No"))
+# URL para el audio en tiempo real que deseas transcribir
+URL = 'http://stream.live.vc.bbcmedia.co.uk/bbc_world_service'
 
-if recording == "Sí":
-    st.write("¡Grabando! Habla para comenzar la transcripción.")
+async def transcribe_audio():
+    try:
+        # Inicializar el cliente de Deepgram
+        deepgram = Deepgram(DEEPGRAM_API_KEY)
 
-    # Código para la grabación de voz (debes implementar esto)
+        # Crear una conexión WebSocket a Deepgram
+        deepgramLive = await deepgram.transcription.live({
+            'smart_format': True,
+            'interim_results': False,
+            'language': 'en-US',
+            'model': 'nova',
+        })
 
-    # Después de la grabación, envía el archivo de audio a Deepgram para transcripción
-    # Sustituye 'audio_data' con los datos reales de audio grabados
-    audio_data = None
-    response = dg_client.transcription.sync({
-        "content": audio_data,
-        "model": "nova",
-        "language": "es",
-        "smart_format": True,
-    })
+        # Escuchar el evento de cierre de la conexión
+        deepgramLive.registerHandler(deepgramLive.event.CLOSE, lambda c: st.write(f'Conexión cerrada con el código {c}.'))
 
-    # Muestra la transcripción en tiempo real
-    st.write("Transcripción en tiempo real:")
-    if "text" in response:
-        st.write(response["text"])
-    else:
-        st.write("Transcripción no disponible.")
+        # Escuchar los resultados de la transcripción y mostrarlos en la aplicación
+        async for transcript in deepgramLive:
+            st.write("Transcripción en tiempo real:")
+            st.write(transcript)
 
-# Detener la grabación de voz
-else:
-    st.write("Grabación de voz detenida.")
+        # Indicar que hemos terminado de enviar datos enviando un mensaje de cero bytes al punto final de transmisión de Deepgram y esperar hasta que recibamos el objeto de metadatos final
+        await deepgramLive.finish()
 
-# Fin de la aplicación
+    except Exception as e:
+        st.write(f'No se pudo abrir el socket: {e}')
+
+# Iniciar la transcripción de audio
+if st.button("Iniciar Transcripción de Audio"):
+    st.write("Transcripción en tiempo real iniciada. Habla para comenzar.")
+
+    # Iniciar la transcripción en segundo plano
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(transcribe_audio())
+
+    st.write("Transcripción en tiempo real finalizada.")
+
+# Detener la transcripción de audio
+if st.button("Detener Transcripción de Audio"):
+    st.write("Transcripción en tiempo real detenida.")
+
+# Si ejecutas la aplicación de Streamlit en una celda de Jupyter Notebook, utiliza await main() en lugar de ejecutarla con asyncio.run(main())
