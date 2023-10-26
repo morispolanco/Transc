@@ -1,2 +1,2 @@
-srtreamlit
+streamlit
 deepgram
