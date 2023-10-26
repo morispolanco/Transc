@@ -2,8 +2,6 @@ import streamlit as st
 import asyncio
 import aiohttp
 from deepgram import Deepgram
-from pydub import AudioSegment
-import io
 
 # Título de la aplicación
 st.title("Transcripción de Archivo de Audio")
@@ -30,10 +28,9 @@ async def transcribe_audio(audio_data):
         # Escuchar el evento de cierre de la conexión
         deepgramLive.registerHandler(deepgramLive.event.CLOSE, lambda c: st.write(f'Conexión cerrada con el código {c}.'))
 
-        # Iniciar la conexión
-        await deepgramLive.open()
-
         # Enviar el archivo de audio a Deepgram
+        deepgramLive.start()
+
         deepgramLive.send(audio_data)
 
         # Indicar que hemos terminado de enviar datos enviando un mensaje de cero bytes al punto final de transmisión de Deepgram y esperar hasta que recibamos el objeto de metadatos final
@@ -55,7 +52,6 @@ if uploaded_file is not None:
 
     # Comprobar si el archivo es compatible con pydub
     try:
-        audio = AudioSegment.from_file(io.BytesIO(audio_data))
         asyncio.run(transcribe_audio(audio_data))
     except Exception as e:
         st.write("Error al procesar el archivo de audio. Asegúrate de que el archivo esté en un formato compatible (m4a, mp3, wav).")
