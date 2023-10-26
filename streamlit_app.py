@@ -43,10 +43,8 @@ async def transcribe_audio():
 if st.button("Iniciar Transcripción de Audio"):
     st.write("Transcripción en tiempo real iniciada. Habla para comenzar.")
 
-    # Iniciar la transcripción en segundo plano
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(transcribe_audio())
+    # Iniciar la transcripción en el bucle de eventos de Streamlit
+    asyncio.run(transcribe_audio())
 
     st.write("Transcripción en tiempo real finalizada.")
 
@@ -54,4 +52,4 @@ if st.button("Iniciar Transcripción de Audio"):
 if st.button("Detener Transcripción de Audio"):
     st.write("Transcripción en tiempo real detenida.")
 
-# Si ejecutas la aplicación de Streamlit en una celda de Jupyter Notebook, utiliza await main() en lugar de ejecutarla con asyncio.run(main())
+# Reemplaza 'YOUR_DEEPGRAM_API_KEY' con tu clave de API de Deepgram antes de ejecutar la aplicación
