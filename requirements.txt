@@ -1,4 +1,4 @@
-deepgram
+deepgram-sdk
 streamlit
 ffmpeg-python
 pydub
