@@ -1,35 +1,39 @@
 import streamlit as st
-import asyncio
-import json
 from deepgram import Deepgram
+import json
 
-# Tu clave API de Deepgram 
-DEEPGRAM_API_KEY = '887355a9368a2b55cbb723a9b735af03f618ed6c'  
+st.title('Transcriptor de Audio')
 
+DEEPGRAM_API_KEY = '887355a9368a2b55cbb723a9b735af03f618ed6c'
 
-# Ruta al archivo M4A local
-FILE = 'ruta/a/tu/archivo.m4a'  
+@st.cache
+def get_deepgram_client():
+    return Deepgram(DEEPGRAM_API_KEY)
 
-async def main():
+audio_file = st.file_uploader("Sube un archivo de audio (M4A, MP3, WAV)", type=['m4a', 'mp3', 'wav'])
 
-  deepgram = Deepgram(DEEPGRAM_API_KEY)
+if audio_file is not None:
 
-  # Abrir el archivo en modo bytes para lectura binaria
-  with open(FILE, 'rb') as audio: 
-    source = {
-      'buffer': audio,
-      'mimetype': 'audio/mp4' # Mimetype para M4A
-    }
+    dg_client = get_deepgram_client()
+    
+    audio_bytes = audio_file.read()
 
-  response = await deepgram.transcription.prerecorded(
-    source,
-    {
-      'language': 'es-ES',  
-      'sample_rate': 44100, # Estándar para archivos M4A
-      'model': 'nova'
-    }
-  )
+    try:
+        response = dg_client.transcription.sync_prerecorded(
+            {'buffer': audio_bytes, 'mimetype': audio_file.type},
+            {
+                'language': 'es-ES',
+                'smart_format': True
+            }
+        )
+    except Exception as e:
+        st.error(f"Error al transcribir el audio: {e}")
+        st.stop()
 
-  print(json.dumps(response, indent=4))
- 
-asyncio.run(main())
+    st.write("Transcripción:")
+    st.write(response['results']['channels'][0]['alternatives'][0]['transcript'])
+    
+    st.json(response)
+
+else:
+    st.write("Sube un archivo de audio para comenzar")
