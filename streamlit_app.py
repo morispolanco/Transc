@@ -6,7 +6,7 @@ st.title('Transcriptor de Audio')
 
 DEEPGRAM_API_KEY = '887355a9368a2b55cbb723a9b735af03f618ed6c'
 
-@st.cache
+@st.cache_data
 def get_deepgram_client():
   return Deepgram(DEEPGRAM_API_KEY)
 
@@ -36,4 +36,4 @@ if audio_file is not None:
   st.json(response)
 
 else:
-  st.write("Sube un archivo M4A para comenzar") 
+  st.write("Sube un archivo M4A para comenzar")
